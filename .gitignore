@@ -1,0 +1,6 @@
+**/target/*
+**.png
+**.svg
+**.pdf
+**.npy
+**.npz

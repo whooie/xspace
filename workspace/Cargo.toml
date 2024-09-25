@@ -1,0 +1,36 @@
+[package]
+name = "workspace"
+version = "0.1.0"
+authors = [ "whooie <wcwhuie@gmail.com>",]
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.89"
+ndarray = "0.15.6"
+num-complex = "0.4.6"
+xspace = { path = "../xspace", version = "*" }
+
+[lib]
+path = "lib/lib.rs"
+name = "lib"
+
+[dependencies.whooie]
+git = "https://gitlab.com/whooie/rust-lib.git"
+version = "*"
+features = [ "ndarray-utils",]
+
+[[bin]]
+path = "src/qho.rs"
+name = "qho"
+
+[[bin]]
+path = "src/quartic.rs"
+name = "quartic"
+
+[[bin]]
+path = "src/quartic_shooting.rs"
+name = "quartic_shooting"
+
+[profile.release]
+lto = true
+panic = "abort"

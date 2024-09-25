@@ -1,0 +1,26 @@
+[package]
+name = "xspace"
+version = "0.1.0"
+authors = [ "whooie <wcwhuie@gmail.com>",]
+edition = "2021"
+
+[dependencies]
+ndarray = "0.15.6"
+ndarray-linalg = { version = "0.16.0", features = ["openblas-system"] }
+num-complex = "0.4.6"
+num-traits = "0.2.19"
+rustfft = "6.2.0"
+thiserror = "1.0.63"
+
+[dev-dependencies.whooie]
+git = "https://gitlab.com/whooie/rust-lib.git"
+version = "*"
+features = [ "ndarray-utils",]
+
+[lib]
+path = "lib/lib.rs"
+name = "xspace"
+
+[profile.release]
+lto = true
+panic = "abort"
