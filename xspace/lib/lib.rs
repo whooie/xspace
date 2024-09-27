@@ -16,6 +16,16 @@
 //!     - Pseudo-spectral split-step operator
 //!
 //! See [`docs`] for theoretical background.
+//!
+//! [^1]: B. Numerov, "Note on the numerical integration of d2x/dt2 = f(x,t)."
+//! Astronomische Nachrichten **230** 19 (1927).
+//!
+//! [^2]: M. Pillai, J. Goglio, and T. Walker, "Matrix Numerov method for
+//! solving Schrödinger's equation." American Journal of Physics **80** 11
+//! 1017-1019 (2012).
+//!
+//! [^3]: B. R. Johnson, "New numerical methods applied to solving the
+//! one-dimensional eigenvalue problem." J. Chem. Phys. **67**:4086 (1977).
 
 pub mod error;
 pub mod interp;
@@ -29,5 +39,8 @@ pub mod docs;
 pub(crate) const DEF_EPSILON: f64 = 1e-6;
 pub(crate) const DEF_MAXITERS: usize = 1000;
 
+/// A one-dimensional array with owned or shared internal data.
 pub type Arr1<S> = ndarray::ArrayBase<S, ndarray::Ix1>;
+
+/// A two-dimensional array with owned or shared internal data.
 pub type Arr2<S> = ndarray::ArrayBase<S, ndarray::Ix2>;

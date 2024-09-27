@@ -1,3 +1,5 @@
+//! Theoretical background.
+//!
 //! # Contents
 //! - [Background](#background)
 //! - [Units](#units)
@@ -213,17 +215,92 @@
 //! the above can be applied.
 //!
 //! # Time dependence
-//! Now 
+//! Evolution of a spatial wavefunction in time is performed via the split-step
+//! method. This is a particularly nice method to use for the Schrödinger
+//! equation because the Hamiltonian opposite the time derivative is
+//! conveniently expressed as the sum of two operators, kinetic and potential.
+//! In our natural units:
+//! ```text
+//!   ∂ψ
+//! i -- = (H_k + H_v) ψ
+//!   ∂t
+//!
+//! H_k = k²
+//! H_v = V
+//! ```
+//! The general form of the time-dependent solution then looks like
+//! ```text
+//!               -i H_v dt  -i H_k dt  -i [H_v, H_k] dt²/2  O(dt³)
+//! ψ(t + dt) = [e          e          e                    e      ] ψ(t)
+//! ```
+//! using the Baker-Campbell-Hausdorff formula. Of course, the terms involving
+//! the \[*H*<sub>*v*</sub>, *H*<sub>*v*</sub>\] commutator are messy; they can
+//! simply be discarded, but doing so would generate a *O*(*dt*²) error term,
+//! which is relatively large. However, it turns out that by sandwiching the
+//! *H*<sub>*k*</sub>-step term between two half-sized *H*<sub>*v*</sub>-step
+//! terms reduces the error do *O*(*dt*³), which is more acceptable.
+//! ```text
+//!               -i H_v dt/2  -i H_k dt  -i H_v dt/2
+//! ψ(t + dt) = [e            e          e           ] ψ(t) + O(dt³)
+//! ```
+//! Now the true benefit to using this method is that the kinetic and potential
+//! terms can be dealt with independently. The potential term is
+//! straightforward: Since the *x* operator is diagonal in position space space,
+//! analytic functions of *x* are likewise diagonal, and hence the action of the
+//! potential term reduces to applying a simple phase factor pointwise to ψ:
+//! ```text
+//!  -i H_v dt/2         -i V(x) dt/2
+//! e            ψ(x) = e             ψ(x)
+//! ```
+//! The kinetic term, however, involves the *k* operator, which is usually
+//! translated to a spatial derivative implemented as a finite difference with a
+//! *O*(*dx*²) error term. In an exponential, this would be quite messy, but one
+//! can note that *k* is diagonal in momentum space, which can be accessed using
+//! the (fast) Fourier transform! Thus the action of the kinetic term can
+//! likewise be reduced to applying a pointwise phase factor in momentum space:
+//! ```text
+//!  -i H_k dt                -i k² dt
+//! e          F[ψ](k) = F⁻¹[e         F[ψ](k)]
+//! ```
+//! where *F* and *F*⁻¹ denote the Fourier transform and its inverse.
+//!
+//! Using this scheme, taking a step *dt* in time looks like this:
+//! ```text
+//!        ψ(t, x)
+//!           |
+//!           V
+//!     -i V(t, x) dt/2
+//!    e
+//!           |
+//!           '--> FFT ---.
+//!                       |
+//!                       V
+//!                    -i k² dt
+//!                   e
+//!                       |
+//!           .-- iFFT <--'
+//!           |
+//!           V
+//!  -i V(t + dt, x) dt/2
+//! e
+//!           |
+//!           V
+//!     ψ(t + dt, x)
+//! ```
+//! Further, this scheme is particularly amenable to extensions to 2D and 3D as
+//! well as nonlinear terms in either position or momentum space, and even to
+//! evolution in imaginary time (i.e. taking *t* → -*i* *t*), which can be used
+//! to find the ground state of the potential.
 //!
 //! [^1]: B. Numerov, "Note on the numerical integration of d2x/dt2 = f(x,t)."
-//! Astronomische Nachrichten *230* 19 (1927).
+//! Astronomische Nachrichten **230** 19 (1927).
 //!
 //! [^2]: M. Pillai, J. Goglio, and T. Walker, "Matrix Numerov method for
-//! solving Schrödinger's equation." American Journal of Physics *80* 11
+//! solving Schrödinger's equation." American Journal of Physics **80** 11
 //! 1017-1019 (2012).
 //!
 //! [^3]: B. R. Johnson, "New numerical methods applied to solving the
-//! one-dimensional eigenvalue problem." J. Chem. Phys. 67:4086 (1977).
+//! one-dimensional eigenvalue problem." J. Chem. Phys. **67**:4086 (1977).
 //!
 //! [secant]: https://en.wikipedia.org/wiki/Secant_method
 

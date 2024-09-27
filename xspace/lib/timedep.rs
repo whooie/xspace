@@ -4,13 +4,14 @@
 //!
 //! In all 2D arrays, the first (or zero-th) axis indexes time.
 
-use std::f64::consts::TAU;
+use std::{ rc::Rc, f64::consts::TAU };
 use ndarray as nd;
 use num_complex::Complex64 as C64;
 use crate::{
     Arr1,
     Arr2,
-    error::TError,
+    error::{ LengthError, TError },
+    solve,
     utils::{ fft, fft_inplace, ifft_inplace, wf_renormalize },
 };
 
@@ -539,5 +540,235 @@ where
         q_temp.clone().move_into(qkp1);
     }
     q
+}
+
+/// Either a functional or pre-sampled array description of a time-dependent
+/// potential.
+#[derive(Clone)]
+pub enum PotT<'a> {
+    /// Potential function; the first argument corresponds to time.
+    Func(Rc<dyn Fn(f64, f64) -> f64 + 'a>),
+    /// Potential array; the first (row) axis corresponds to time.
+    Sampled(nd::Array2<f64>),
+}
+
+impl<'a> std::fmt::Debug for PotT<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Func(_) => write!(f, "Func(...)"),
+            Self::Sampled(a) => write!(f, "Sampled({:?})", a),
+        }
+    }
+}
+
+impl<'a, F> From<F> for PotT<'a>
+where F: Fn(f64, f64) -> f64 + 'a
+{
+    fn from(f: F) -> Self { Self::Func(Rc::new(f)) }
+}
+
+impl<'a> From<nd::Array2<f64>> for PotT<'a> {
+    fn from(arr: nd::Array2<f64>) -> Self { Self::Sampled(arr) }
+}
+
+/// Like [`solve::System`], but for time-dependent potentials.
+#[derive(Clone, Debug)]
+pub struct SystemT<'a> {
+    // time coordinate array
+    t: nd::Array1<f64>,
+    // time coordinate array grid spacing
+    dt: f64,
+    // space coordinate array
+    x: nd::Array1<f64>,
+    // space coordinate array grid spacing
+    dx: f64,
+    // potential
+    V: PotT<'a>,
+    // t-array size
+    nt: usize,
+    // x-array size
+    nx: usize,
+}
+
+impl<'a> SystemT<'a> {
+    /// Create a new `System`, generating the coordinate arrays from
+    /// "linspace-style" arguments (start, inclusive end, and array length).
+    ///
+    /// The first argument of the potential function should correspond to time.
+    ///
+    /// *Panics if the size of the time or space axes is less than 2*.
+    pub fn new_linspace<F>(
+        targs: (f64, f64, usize),
+        xargs: (f64, f64, usize),
+        V: F,
+    ) -> Self
+    where F: Fn(f64, f64) -> f64 + 'a
+    {
+        let t: nd::Array1<f64>
+            = nd::Array1::linspace(targs.0, targs.1, targs.2);
+        let dt = t[1] - t[0];
+        let x: nd::Array1<f64>
+            = nd::Array1::linspace(xargs.0, xargs.1, xargs.2);
+        let dx = x[1] - x[0];
+        let V = PotT::from(V);
+        let nt = targs.2;
+        let nx = xargs.2;
+        Self { t, dt, x, dx, V, nt, nx }
+    }
+
+    /// Like [`Self::new_linspace`], but immediately sampling the potential
+    /// function into an array.
+    pub fn new_linspace_sampled<F>(
+        targs: (f64, f64, usize),
+        xargs: (f64, f64, usize),
+        mut V: F,
+    ) -> Self
+    where F: FnMut(f64, f64) -> f64
+    {
+        let t: nd::Array1<f64>
+            = nd::Array1::linspace(targs.0, targs.1, targs.2);
+        let dt = t[1] - t[0];
+        let x: nd::Array1<f64>
+            = nd::Array1::linspace(xargs.0, xargs.1, xargs.2);
+        let dx = x[1] - x[0];
+        let V: PotT
+            = t.iter().flat_map(|ti| x.iter().map(|xj| (*ti, *xj)))
+            .map(|(ti, xj)| V(ti, xj))
+            .collect::<nd::Array1<f64>>()
+            .into_shape((t.len(), x.len()))
+            .unwrap()
+            .into();
+        let nt = targs.2;
+        let nx = xargs.2;
+        Self { t, dt, x, dx, V, nt, nx }
+    }
+
+    /// Create a new `System`, generating the coordinate arrays from
+    /// "range-style" arguments (start, exclusive end, and a step size).
+    ///
+    /// The first argument of the potential function should correspond to time.
+    pub fn new_range<F>(
+        targs: (f64, f64, f64),
+        xargs: (f64, f64, f64),
+        V: F,
+    ) -> Self
+    where F: Fn(f64, f64) -> f64 + 'a
+    {
+        let t: nd::Array1<f64>
+            = nd::Array1::range(targs.0, targs.1, targs.2);
+        let dt = targs.2;
+        let x: nd::Array1<f64>
+            = nd::Array1::range(xargs.0, xargs.1, xargs.2);
+        let dx = xargs.2;
+        let V = PotT::from(V);
+        let nt = t.len();
+        let nx = x.len();
+        Self { t, dt, x, dx, V, nt, nx }
+    }
+
+    /// Like [`Self::new_range`], but immediately sampling the potential
+    /// function into an array.
+    pub fn new_range_sampled<F>(
+        targs: (f64, f64, f64),
+        xargs: (f64, f64, f64),
+        mut V: F,
+    ) -> Self
+    where F: FnMut(f64, f64) -> f64
+    {
+        let t: nd::Array1<f64>
+            = nd::Array1::range(targs.0, targs.1, targs.2);
+        let dt = targs.2;
+        let x: nd::Array1<f64>
+            = nd::Array1::range(xargs.0, xargs.1, xargs.2);
+        let dx = xargs.2;
+        let V: PotT
+            = t.iter().flat_map(|ti| x.iter().map(|xj| (*ti, *xj)))
+            .map(|(ti, xj)| V(ti, xj))
+            .collect::<nd::Array1<f64>>()
+            .into_shape((t.len(), x.len()))
+            .unwrap()
+            .into();
+        let nt = t.len();
+        let nx = x.len();
+        Self { t, dt, x, dx, V, nt, nx }
+    }
+
+    /// Create a new `SystemT` from bare coordinate and potential arrays.
+    ///
+    /// *Panics if the size of the time or space axes is less than 2*.
+    pub fn new_arrays(
+        t: nd::Array1<f64>,
+        x: nd::Array1<f64>,
+        V: nd::Array2<f64>,
+    ) -> TResult<Self>
+    {
+        LengthError::check(&t, &V.slice(nd::s![.., 0]))?;
+        LengthError::check(&x, &V.slice(nd::s![0, ..]))?;
+        let dt = t[1] - t[0];
+        let dx = x[1] - x[0];
+        let V = PotT::Sampled(V);
+        let nt = t.len();
+        let nx = x.len();
+        Ok(Self { t, dt, x, dx, V, nt, nx })
+    }
+
+    /// Get a reference to the temporal coordinate array.
+    pub fn get_t(&self) -> &nd::Array1<f64> { &self.t }
+
+    /// Get the temporal coordinate array grid spacing.
+    pub fn get_dt(&self) -> f64 { self.dt }
+
+    /// Get a reference to the spatial coordinate array.
+    pub fn get_x(&self) -> &nd::Array1<f64> { &self.x }
+
+    /// Get the spatial coordinate array grid spacing.
+    pub fn get_dx(&self) -> f64 { self.dx }
+
+    /// Get a reference to the potential.
+    pub fn get_V(&self) -> &PotT<'_> { &self.V }
+
+    /// Get the lengths of the temporal and spatial coordinate arrays.
+    ///
+    /// The first length corresponds to time.
+    pub fn shape(&self) -> (usize, usize) { (self.nt, self.nx) }
+
+    /// Thin interface to [`solve::solve`] using the potential at the given time
+    /// or the closest sample.
+    pub fn solve(&self, t0: f64, method: solve::Method, compute_wf: bool)
+        -> solve::XResult<Vec<solve::Solution>>
+    {
+        match &self.V {
+            PotT::Func(f) => {
+                let v: nd::Array1<f64> = self.x.mapv(|xk| f(t0, xk));
+                solve::solve(self.dx, &v, method, compute_wf)
+            },
+            PotT::Sampled(arr) => {
+                let k: usize
+                    = self.t.iter()
+                    .map(|tk| (*tk - t0).abs())
+                    .enumerate()
+                    .min_by(|(_, dtl), (_, dtr)| dtl.total_cmp(dtr))
+                    .unwrap().0;
+                let v: nd::ArrayView1<f64> = arr.slice(nd::s![k, ..]);
+                solve::solve(self.dx, &v, method, compute_wf)
+            },
+        }
+    }
+
+    /// Thin interface to [`split_step`] or [`split_step_func`], depending on
+    /// the form of the potential.
+    pub fn evolve<S>(&self, q0: &Arr1<S>) -> nd::Array2<C64>
+    where S: nd::Data<Elem = C64>
+    {
+        match &self.V {
+            PotT::Func(f) => {
+                let v = |t: f64| self.x.mapv(|xk| f(t, xk));
+                split_step_func(self.dx, v, q0, &self.t)
+            },
+            PotT::Sampled(arr) => {
+                split_step(self.dx, arr, q0, &self.t)
+            },
+        }
+    }
 }
 

@@ -106,6 +106,10 @@ pub enum TError {
 
     #[error("rka error bound could not be satisfied")]
     RKAErrorBound,
+
+    /// [`LengthError`]
+    #[error("array length error: {0}")]
+    Length(#[from] LengthError),
 }
 
 impl TError {

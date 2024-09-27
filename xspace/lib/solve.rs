@@ -6,7 +6,7 @@ use ndarray as nd;
 use ndarray_linalg::{ self as la, EighInto, EigValshInto, InverseInto };
 use crate::{
     Arr1,
-    error::XError,
+    error::{ LengthError, XError },
     interp,
     utils::{ wf_renormalize, wf_normalized },
     DEF_EPSILON,
@@ -604,8 +604,6 @@ impl System {
 
     /// Create a new `System`, generating the coordinate array from
     /// "range-style" arguments (start, exclusive end, and a step size).
-    ///
-    /// *Panics if the number of points is less than 2*.
     pub fn new_range<F>(xargs: (f64, f64, f64), V: F) -> Self
     where F: FnMut(f64) -> f64
     {
@@ -615,6 +613,16 @@ impl System {
         let V: nd::Array1<f64> = x.mapv(V);
         let n = x.len();
         Self { x, dx, V, n }
+    }
+
+    /// Create a new `System` from bare coordinate and potential arrays.
+    ///
+    /// *Panics if the number of points is less than 2*.
+    pub fn new_arrays(x: nd::Array1<f64>, V: nd::Array1<f64>) -> XResult<Self> {
+        LengthError::check(&x, &V)?;
+        let dx = x[1] - x[0];
+        let n = x.len();
+        Ok(Self { x, dx, V, n })
     }
 
     /// Get a reference to the coordinate array.
@@ -627,8 +635,6 @@ impl System {
     pub fn get_dx(&self) -> f64 { self.dx }
 
     /// Get the length of the coordinate and potential arrays.
-    ///
-    /// This is guaranteed to be at least 2.
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize { self.n }
 

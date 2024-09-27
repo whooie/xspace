@@ -21,7 +21,7 @@ where
     (dx / two) * (y[0] + two * y.slice(nd::s![1..n - 1]).sum() + y[n - 1])
 }
 
-/// Calculate the norm of a wavefunction without allocating.
+/// Calculate the norm of a wavefunction.
 ///
 /// *Panics if `q` has length less than 2*.
 pub fn wf_norm<S, A>(q: &nd::ArrayBase<S, Ix1>, dx: A::Real) -> A::Real
@@ -33,9 +33,32 @@ where
     let two = <A as Scalar>::Real::one() + <A as Scalar>::Real::one();
     (dx / two) * (
         q[0].square()
-        + two * q.iter().map(|qk| qk.square())
+        + two * q.iter().skip(1).take(n - 2).map(|qk| qk.square())
             .fold(<A as Scalar>::Real::zero(), <A as Scalar>::Real::add)
         + q[n - 1].square()
+    )
+}
+
+/// Calculate the inner product of two wavefunctions.
+///
+/// *Panics if either array has length less than 2*.
+pub fn wf_dot<S, T, A>(
+    q: &nd::ArrayBase<S, Ix1>,
+    p: &nd::ArrayBase<T, Ix1>,
+    dx: A::Real,
+) -> A
+where
+    S: nd::Data<Elem = A>,
+    T: nd::Data<Elem = A>,
+    A: Scalar,
+{
+    let n: usize = q.len().min(p.len());
+    let two = A::one() + A::one();
+    (A::from_real(dx) / two) * (
+        q[0].conj() * p[0]
+        + two * q.iter().zip(p).skip(1).take(n - 2)
+            .fold(A::zero(), |acc, (qk, pk)| acc + qk.conj() * *pk)
+        + q[n - 1].conj() * p[n - 1]
     )
 }
 
