@@ -10,9 +10,13 @@ x = data["x"]
 v = data["v"]
 e = data["e"]
 enat = data["enat"][0]
+a = data["a"][0]
 wf = data["wf"]
 tps = data["tps"]
 
+print(f"a = {a * enat / phys.h / 1e3:.3} kHz / μm⁴")
+
+ediff = e[1:] - e[:-1]
 De = e.max() - e.min()
 
 P = pd.Plotter()
@@ -33,17 +37,33 @@ for (k, (ek, wfk)) in enumerate(zip(e, wf)):
     .close()
 )
 
+FS = pd.pp.rcParams["figure.figsize"]
 (
-    pd.Plotter.new(nrows=2, sharex=True, as_plotarray=True)
+    pd.Plotter.new(
+        nrows=3,
+        sharex=True,
+        figsize=[FS[0], 1.25 * FS[1]],
+        as_plotarray=True)
     [0]
     .plot(e * enat / phys.h / 1e3, marker="o", linestyle="", color="C0")
     .ggrid()
     .set_ylabel("Energy [kHz]", fontsize="small")
-    .set_title(f"$E_1 - E_0 = {(e[1] - e[0]) * enat / phys.h / 1e3:.3}$ kHz")
+    .set_title(
+        f"$E_1 - E_0 = {(e[1] - e[0]) * enat / phys.h / 1e3:g}$ kHz\n"
+        f"$E_2 - E_1 = {(e[2] - e[1]) * enat / phys.h / 1e3:g}$ kHz"
+    )
     [1]
+    .plot(
+        0.5 + np.arange(ediff.shape[0]),
+        ediff * enat / phys.h / 1e3,
+        marker="o", linestyle="", color="C1",
+    )
+    .ggrid()
+    .set_ylabel("Diff. [kHz]", fontsize="small")
+    [2]
     .plot(tps, marker="o", linestyle="", color="k")
     .ggrid()
-    .set_ylim(bottom=0)
+    # .set_ylim(bottom=0)
     .set_ylabel("Turning pt. [μm]", fontsize="small")
     .set_xlabel("$\\nu$")
     .tight_layout(h_pad=0.5)

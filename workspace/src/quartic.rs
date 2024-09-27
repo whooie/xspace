@@ -8,12 +8,15 @@ const LSCALE: f64 = 1e-6; // length scale; m
 
 fn main() {
     let uu = units::Units::from_mks(MASS, LSCALE);
-    let a: f64 = 1.6e-3; // potential parameter
-    let x: nd::Array1<f64> = nd::Array1::linspace(-15.0, 15.0, 3001);
+    // let a: f64 = 0.1; // potential parameter
+    // let x: nd::Array1<f64> = nd::Array1::linspace(-15.0, 15.0, 3001);
+    let a: f64 = 10500.0; // potential parameter
+    // let a: f64 = 31500.0; // potential parameter
+    let x: nd::Array1<f64> = nd::Array1::linspace(-1.5, 1.5, 3001);
     let dx = x[1] - x[0];
     let v: nd::Array1<f64> = x.mapv(|xk| a * xk.powi(4));
 
-    let escan: nd::Array1<f64> = nd::Array1::linspace(0.0, 20.0, 10000);
+    let escan: nd::Array1<f64> = nd::Array1::linspace(0.0, 5000.0, 10000);
     let sols: Vec<solve::Solution>
         = solve::solve_shooting(dx, &v, &escan, true).unwrap();
     println!("{} solutions found", sols.len());
@@ -42,6 +45,7 @@ fn main() {
             "v" => &v,
             "e" => &energies,
             "enat" => &nd::array![uu.e],
+            "a" => &nd::array![a],
             "wf" => &wfs,
             "tps" => &turning_points,
         }

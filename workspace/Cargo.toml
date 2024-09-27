@@ -31,6 +31,14 @@ name = "quartic"
 path = "src/quartic_shooting.rs"
 name = "quartic_shooting"
 
+[[bin]]
+path = "src/quartic_amod.rs"
+name = "quartic_amod"
+
+[[bin]]
+path = "src/quartic_xmod.rs"
+name = "quartic_xmod"
+
 [profile.release]
 lto = true
 panic = "abort"
