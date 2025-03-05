@@ -8,6 +8,7 @@ edition = "2021"
 anyhow = "1.0.89"
 ndarray = "0.15.6"
 num-complex = "0.4.6"
+rand = "0.8.5"
 xspace = { path = "../xspace", version = "*" }
 
 [lib]
@@ -38,6 +39,10 @@ name = "quartic_amod"
 [[bin]]
 path = "src/quartic_xmod.rs"
 name = "quartic_xmod"
+
+[[bin]]
+path = "src/tweezer_demag.rs"
+name = "tweezer_demag"
 
 [profile.release]
 lto = true

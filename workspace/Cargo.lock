@@ -1194,6 +1194,7 @@ dependencies = [
  "anyhow",
  "ndarray",
  "num-complex",
+ "rand",
  "whooie",
  "xspace",
 ]

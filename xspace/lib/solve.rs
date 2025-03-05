@@ -428,17 +428,19 @@ where S: nd::Data<Elem = f64>
         match n.cmp(&nu) {
             cmp::Ordering::Less => {
                 Eb.0 = E;
+                nb.0 = n;
                 E = Eb.midpoint();
                 n = node_count(dx, V, E);
             },
             cmp::Ordering::Greater => {
                 Eb.1 = E;
+                nb.1 = n;
                 E = Eb.midpoint();
                 n = node_count(dx, V, E);
             },
             cmp::Ordering::Equal => {
                 if nb.0 < nu { Eb.0 = (Eb.0 + E) / 2.0; }
-                if nb.1 < nu { Eb.1 = (E + Eb.1) / 2.0; }
+                if nb.1 > nu { Eb.1 = (E + Eb.1) / 2.0; }
             },
         }
         nb = Eb.map(|e| node_count(dx, V, e));
