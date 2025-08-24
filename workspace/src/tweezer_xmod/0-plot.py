@@ -4,7 +4,7 @@ import numpy as np
 import whooie.pyplotdefs as pd
 
 outdir = Path("output")
-data = np.load(str(outdir.joinpath("quartic_xmod.npz")))
+data = np.load(str(outdir.joinpath("tweezer_xmod.npz")))
 mass = data["mass"][0]
 anat = data["anat"][0]
 enat = data["enat"][0]
@@ -54,7 +54,7 @@ pd.Plotter() \
     .set_xlabel("$x$ [μm]") \
     .set_ylabel("Time [μs]") \
     .set_title(title) \
-    .savefig(outdir.joinpath(f"quartic_xmod_wf_dx={ampl:.4f}.png")) \
+    .savefig(outdir.joinpath(f"tweezer_xmod_wf_dx={ampl:.4f}.png")) \
     .close()
 
 (
@@ -68,8 +68,9 @@ pd.Plotter() \
     .set_xlabel("Time [μs]")
     .set_ylabel("Probability")
     # .set_title(title)
-    .savefig(outdir.joinpath(f"quartic_xmod_probs_dx={ampl:.4f}.png"))
-    .savefig(outdir.joinpath(f"quartic_xmod_probs_dx={ampl:.4f}.pdf"))
+    .savefig(outdir.joinpath(f"tweezer_xmod_probs_dx={ampl:.4f}.png"))
+    .savefig(outdir.joinpath(f"tweezer_xmod_probs_dx={ampl:.4f}.pdf"))
+    .show()
     .close()
 )
 

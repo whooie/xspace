@@ -35,7 +35,7 @@ P012 = P0 + P1 + P2
 print(P2.max(), file=sys.stderr)
 
 t *= tnat * 1e6
-k0 = P2.argmax()
+k0 = P2[:P2.shape[0] // 2].argmax()
 t0 = t[k0]
 rabi_freq = 0.5 / t0 * 1e3
 
@@ -55,18 +55,21 @@ pd.Plotter() \
     .savefig(outdir.joinpath(f"quartic_amod_wf_da={ampl:.3f}.png")) \
     .close()
 
-pd.Plotter() \
-    .plot(t, P012, color="k", label="$P_0 + P_1 + P_2$") \
-    .plot(t, P0, label="$P_0$") \
-    .plot(t, P1, label="$P_1$") \
-    .plot(t, P2, label="$P_2$") \
-    .ggrid() \
-    .legend(fontsize="xx-small") \
-    .set_xlabel("$t$ [μs]") \
-    .set_ylabel("Probability") \
-    .set_title(title) \
-    .savefig(outdir.joinpath(f"quartic_amod_probs_da={ampl:.3f}.png")) \
+(
+    pd.Plotter.new(figsize=[2.8, 1.5])
+    .plot(t, P012, color="k", label="$P_0 + P_1 + P_2$")
+    .plot(t, P0, label="$P_0$")
+    .plot(t, P1, label="$P_1$")
+    .plot(t, P2, label="$P_2$")
+    .ggrid()
+    .legend(fontsize="x-small", loc="lower left")
+    .set_xlabel("Time [μs]")
+    .set_ylabel("Probability")
+    # .set_title(title)
+    .savefig(outdir.joinpath(f"quartic_amod_probs_da={ampl:.3f}.png"))
+    .savefig(outdir.joinpath(f"quartic_amod_probs_da={ampl:.3f}.pdf"))
     .close()
+)
 
 # pd.show()
 

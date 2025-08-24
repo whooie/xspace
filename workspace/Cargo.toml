@@ -44,6 +44,18 @@ name = "quartic_xmod"
 path = "src/tweezer_demag.rs"
 name = "tweezer_demag"
 
+[[bin]]
+path = "src/tweezer_anharmonicity.rs"
+name = "tweezer_anharmonicity"
+
+[[bin]]
+path = "src/tweezer_amod.rs"
+name = "tweezer_amod"
+
+[[bin]]
+path = "src/tweezer_xmod.rs"
+name = "tweezer_xmod"
+
 [profile.release]
 lto = true
 panic = "abort"
